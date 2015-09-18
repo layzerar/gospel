@@ -17,7 +17,7 @@ setup(
     ],
     zip_safe=True,
     install_requires=[
-        'Jinja2>=2.4',
+        'psutil>=1.2.1',
     ],
     classifiers=[
         'Private :: Do Not Upload',
