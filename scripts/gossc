@@ -153,9 +153,16 @@ def _get_processes_in_screen(screen_pid):
         _log_error("No module named 'psutil'")
         return
     screen_proc = psutil.Process(screen_pid)
-    for child1_proc in screen_proc.children():
-        for child2_proc in child1_proc.children():
-            yield child2_proc.pid
+    for level3_proc in screen_proc.children():
+        if level3_proc.name() == 'login':
+            # pstree: screen -- login -- sh
+            level2_proc_list = level3_proc.children()
+        else:
+            # pstree: screen -- sh
+            level2_proc_list = [level3_proc]
+        for level2_proc in level2_proc_list:
+            for level1_proc in level2_proc.children():
+                yield level1_proc.pid
 
 
 def plist_jobs(namespace):
