@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import io
+import operator
 import os
 import sys
 import signal
@@ -25,7 +26,7 @@ def _log_error(msg, **kwds):
     if kwds:
         msg = msg.format(**kwds)
     sys.stderr.write(msg)
-    sys.stdout.write('\n')
+    sys.stderr.write('\n')
 
 
 def _parse_cli_arguments():
@@ -131,7 +132,7 @@ def exec_jobs(namespace):
 
     screen_pid = screens[0]
     command = ['screen', '-d', str(screen_pid)]
-    subprocess.call(command, stderr=subprocess.PIPE)
+    subprocess.call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     commands = [
         ['screen',
@@ -153,15 +154,22 @@ def _get_processes_in_screen(screen_pid):
         _log_error("No module named 'psutil'")
         return
     screen_proc = psutil.Process(screen_pid)
-    for level3_proc in screen_proc.children():
-        if level3_proc.name() == 'login':
+    if hasattr(screen_proc, 'children'):
+        # psutil >= 2.0
+        get_name = operator.methodcaller('name')
+        get_children = operator.methodcaller('children')
+    else:
+        get_name = operator.attrgetter('name')
+        get_children = operator.methodcaller('get_children')
+    for level3_proc in get_children(screen_proc):
+        if get_name(level3_proc) == 'login':
             # pstree: screen -- login -- sh
-            level2_proc_list = level3_proc.children()
+            level2_proc_list = get_children(level3_proc)
         else:
             # pstree: screen -- sh
             level2_proc_list = [level3_proc]
         for level2_proc in level2_proc_list:
-            for level1_proc in level2_proc.children():
+            for level1_proc in get_children(level2_proc):
                 yield level1_proc.pid
 
 
