@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 setup(
@@ -11,10 +11,12 @@ setup(
     author_email="layzerar@gmail.com",
     url="https://github.com/layzerar/gospel",
     license="MIT License",
-    packages=['gospel'],
-    scripts=[
-        'scripts/gossc',
-    ],
+    packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'gossc=gospel.scripts.gossc:main',
+        ],
+    },
     zip_safe=True,
     install_requires=[
         'psutil>=1.2.1',
