@@ -130,22 +130,19 @@ def exec_jobs(namespace):
         stream = sys.stdin
 
     screen_pid = screens[0]
+    script_buf = io.BytesIO()
+    script_buf.write('\n')  # add an additional '\n' ahead of the script
+    for line in stream:
+        script_buf.write(line.rstrip('\r\n'))
+        script_buf.write('\n')
+    script_buf.seek(0)
+
     command = ['screen', '-d', str(screen_pid)]
     subprocess.call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    commands = [
-        ['screen',
-         '-D', '-r', str(screen_pid),
-         '-p', '0', '-X', 'stuff', '\n'],
-    ]
-    for line in stream:
-        commands.append(
-            ['screen',
-             '-D', '-r', str(screen_pid),
-             '-p', '0', '-X', 'stuff', line.rstrip('\r\n') + '\n']
-        )
-    for command in commands:
-        subprocess.call(command)
+    command = ['screen', '-D', '-r', str(screen_pid),
+               '-p', '0', '-X', 'stuff', script_buf.read()]
+    subprocess.call(command)
 
 
 def _get_processes_in_screen(screen_pid):
