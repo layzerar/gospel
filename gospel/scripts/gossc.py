@@ -5,6 +5,7 @@ import operator
 import os
 import sys
 import signal
+import tempfile
 import subprocess
 
 import argparse
@@ -105,7 +106,7 @@ def init_screen(namespace):
         _log_info("logout screen [{screen_name}]", screen_name=screen_name)
         command = ['screen',
                    '-D', '-r', str(screens[0]),
-                   '-p', '0', '-X', 'stuff', '\n']
+                   '-X', 'stuff', '\n']
     subprocess.call(command)
 
 
@@ -129,20 +130,25 @@ def exec_jobs(namespace):
     else:
         stream = sys.stdin
 
+    script_key = 'x'
     screen_pid = screens[0]
-    script_buf = io.BytesIO()
-    script_buf.write('\n')  # add an additional '\n' ahead of the script
+    script_fd, script_path = tempfile.mkstemp(prefix='gospel-')
+    os.write(script_fd, '\n')  # add an additional '\n' ahead of the script
     for line in stream:
-        script_buf.write(line.rstrip('\r\n'))
-        script_buf.write('\n')
-    script_buf.seek(0)
+        os.write(script_fd, line.rstrip('\r\n') + '\n')
+    os.close(script_fd)
 
     command = ['screen', '-d', str(screen_pid)]
     subprocess.call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     command = ['screen', '-D', '-r', str(screen_pid),
-               '-p', '0', '-X', 'stuff', script_buf.read()]
+               '-X', 'readreg', script_key, script_path]
     subprocess.call(command)
+    command = ['screen', '-D', '-r', str(screen_pid),
+               '-X', 'paste', script_key]
+    subprocess.call(command)
+
+    os.remove(script_path)
 
 
 def _get_processes_in_screen(screen_pid):
