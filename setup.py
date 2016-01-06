@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="gospel",
-    version="0.1.2",
+    version="0.1.3",
     description="Utilities for deploying applications",
     author="Melvi Ts",
     author_email="layzerar@gmail.com",
