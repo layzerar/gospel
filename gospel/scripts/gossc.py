@@ -102,11 +102,11 @@ def init_screen(namespace):
         command = ['screen',
                    '-h', str(namespace.lines),
                    '-dmS', screen_name]
-    else:
-        _log_info("logout screen [{screen_name}]", screen_name=screen_name)
-        command = ['screen',
-                   '-D', '-r', str(screens[0]),
-                   '-X', 'stuff', '\n']
+        subprocess.call(command)
+
+    command = ['screen',
+               '-D', '-r', str(screens[0]),
+               '-p', '0', '-X', 'stuff', '\n']
     subprocess.call(command)
 
 
