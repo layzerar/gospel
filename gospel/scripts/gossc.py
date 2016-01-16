@@ -3,6 +3,7 @@
 import io
 import operator
 import os
+import re
 import sys
 import signal
 import tempfile
@@ -60,6 +61,16 @@ def _parse_cli_arguments():
                                          help='list all processes in screen')
     parser_plist.add_argument('screen_name',
                               help='screen name')
+
+    # create the parser for the "psck" command
+    parser_psck = subparsers.add_parser('psck',
+                                        help='check processes in screen')
+    parser_psck.add_argument('screen_name',
+                             help='screen name')
+    parser_psck.add_argument('patterns',
+                             nargs='?',
+                             default=None,
+                             help='patterns of entry')
 
     # create the parser for the "plist" command
     parser_pkill = subparsers.add_parser('pkill',
@@ -149,17 +160,19 @@ def exec_jobs(namespace):
     os.remove(script_path)
 
 
-def _get_processes_in_screen(screen_pid):
+def _get_processes_in_screen(screen_pid, with_cmdline=False):
     if psutil is None:
         _log_error("No module named 'psutil'")
         return
     screen_proc = psutil.Process(screen_pid)
-    if hasattr(screen_proc, 'children'):
+    if psutil.version_info[0] >= 2:
         # psutil >= 2.0
         get_name = operator.methodcaller('name')
+        get_cmdline = operator.methodcaller('cmdline')
         get_children = operator.methodcaller('children')
     else:
         get_name = operator.attrgetter('name')
+        get_cmdline = operator.attrgetter('cmdline')
         get_children = operator.methodcaller('get_children')
     for level3_proc in get_children(screen_proc):
         if get_name(level3_proc) == 'login':
@@ -170,7 +183,10 @@ def _get_processes_in_screen(screen_pid):
             level2_proc_list = [level3_proc]
         for level2_proc in level2_proc_list:
             for level1_proc in get_children(level2_proc):
-                yield level1_proc.pid
+                if with_cmdline:
+                    yield level1_proc.pid, get_cmdline(level1_proc)
+                else:
+                    yield level1_proc.pid
 
 
 def plist_jobs(namespace):
@@ -183,6 +199,55 @@ def plist_jobs(namespace):
 
     for child_pid in _get_processes_in_screen(screens[0]):
         _log_info("{child_pid}", child_pid=child_pid)
+
+
+def psck_jobs(namespace):
+    screen_name = namespace.screen_name
+    screens = _find_screens(screen_name)
+    if not screens:
+        _log_error("screen not exists [{screen_name}]",
+                   screen_name=screen_name)
+        return
+
+    patterns = namespace.patterns
+    if patterns is None:
+        stream = sys.stdin
+    else:
+        stream = patterns.splitlines()
+
+    entries = []
+    for line in stream:
+        line = line.strip()
+        if not line:
+            continue
+        patterns = []
+        for regex in line.split('&&'):
+            regex = regex.strip()
+            if not regex:
+                continue
+            patterns.append(re.compile(regex))
+        if patterns:
+            entries.append((line, tuple(patterns)))
+    if not entries:
+        return
+
+    mismatched = 0
+    processes = dict(_get_processes_in_screen(screens[0], with_cmdline=True))
+    for line, patterns in entries:
+        matched_pid = None
+        for child_pid, arguments in processes.iteritems():
+            if all(any(pattern.search(arg)
+                       for arg in arguments)
+                   for pattern in patterns):
+                matched_pid = child_pid
+                break
+        if matched_pid is None:
+            mismatched += 1
+            _log_error('{pid}\t{entry}', pid='NIL', entry=line)
+        else:
+            processes.pop(matched_pid, None)
+            _log_info('{pid}\t{entry}', pid=matched_pid, entry=line)
+    exit(code=mismatched)
 
 
 def pkill_jobs(namespace):
@@ -207,6 +272,7 @@ def main():
         'init': init_screen,
         'exec': exec_jobs,
         'plist': plist_jobs,
+        'psck': psck_jobs,
         'pkill': pkill_jobs,
     }[namespace.action](namespace)
 
