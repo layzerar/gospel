@@ -99,17 +99,11 @@ def init_screen(namespace):
 
     if not screens:
         _log_info("create screen [{screen_name}]", screen_name=screen_name)
-        command = ['screen',
-                   '-h', str(namespace.lines),
-                   '-dmS', screen_name]
-        subprocess.call(command)
-        command = ['screen',
-                   '-D', '-r', screen_name,
-                   '-p', '0', '-X', 'stuff', '\n']
+        command = ['screen', '-dmS', screen_name,
+                   '-h', str(namespace.lines)]
         subprocess.call(command)
     else:
-        command = ['screen',
-                   '-D', '-r', str(screens[0]),
+        command = ['screen', '-D', '-r', str(screens[0]),
                    '-p', '0', '-X', 'stuff', '\n']
         subprocess.call(command)
 
@@ -149,7 +143,7 @@ def exec_jobs(namespace):
                '-X', 'readreg', script_key, script_path]
     subprocess.call(command)
     command = ['screen', '-D', '-r', str(screen_pid),
-               '-X', 'paste', script_key]
+               '-p', '0', '-X', 'paste', script_key]
     subprocess.call(command)
 
     os.remove(script_path)
