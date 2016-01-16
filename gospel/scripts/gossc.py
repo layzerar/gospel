@@ -103,11 +103,15 @@ def init_screen(namespace):
                    '-h', str(namespace.lines),
                    '-dmS', screen_name]
         subprocess.call(command)
-
-    command = ['screen',
-               '-D', '-r', str(screens[0]),
-               '-p', '0', '-X', 'stuff', '\n']
-    subprocess.call(command)
+        command = ['screen',
+                   '-D', '-r', screen_name,
+                   '-p', '0', '-X', 'stuff', '\n']
+        subprocess.call(command)
+    else:
+        command = ['screen',
+                   '-D', '-r', str(screens[0]),
+                   '-p', '0', '-X', 'stuff', '\n']
+        subprocess.call(command)
 
 
 def exec_jobs(namespace):
