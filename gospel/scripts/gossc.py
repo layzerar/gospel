@@ -245,7 +245,7 @@ def psck_jobs(namespace):
             processes.pop(matched_pid, None)
             _log_info('{pid}\t{entry}', pid=matched_pid, entry=line)
     if mismatched == len(entries):
-        exit(code=-1)
+        exit(code=255)
     else:
         exit(code=mismatched)
 
