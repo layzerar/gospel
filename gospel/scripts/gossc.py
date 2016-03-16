@@ -114,8 +114,8 @@ def init_screen(namespace):
                    '-h', str(namespace.lines)]
         subprocess.call(command)
     else:
-        command = ['screen', '-D', '-r', str(screens[0]),
-                   '-p', '0', '-X', 'stuff', '\n']
+        command = ['screen', '-x', str(screens[0]),
+                   '-p', '0', '-X', 'eval', 'stuff ^U']
         subprocess.call(command)
 
 
@@ -147,13 +147,10 @@ def exec_jobs(namespace):
         os.write(script_fd, line.rstrip('\r\n') + '\n')
     os.close(script_fd)
 
-    command = ['screen', '-d', str(screen_pid)]
-    subprocess.call(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    command = ['screen', '-D', '-r', str(screen_pid),
+    command = ['screen', '-x', str(screen_pid),
                '-X', 'readreg', script_key, script_path]
     subprocess.call(command)
-    command = ['screen', '-D', '-r', str(screen_pid),
+    command = ['screen', '-x', str(screen_pid),
                '-p', '0', '-X', 'paste', script_key]
     subprocess.call(command)
 
